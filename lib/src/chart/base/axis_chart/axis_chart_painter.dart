@@ -313,7 +313,7 @@ abstract class AxisChartPainter<D extends AxisChartData>
                   Rect.fromLTRB(
                     from.dx + padding.left,
                     from.dy - padding.bottom - tp.height,
-                    to.dx - padding.right - tp.width,
+                    viewSize.width,
                     to.dy + padding.top,
                   ),
                 ),
