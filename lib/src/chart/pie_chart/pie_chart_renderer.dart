@@ -2,31 +2,31 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:fl_chart/src/chart/base/base_chart/base_chart_painter.dart';
 import 'package:fl_chart/src/chart/base/base_chart/render_base_chart.dart';
 import 'package:fl_chart/src/chart/pie_chart/pie_chart_helper.dart';
+import 'package:fl_chart/src/chart/pie_chart/pie_chart_painter.dart';
 import 'package:fl_chart/src/utils/canvas_wrapper.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-
-import 'pie_chart_painter.dart';
 
 // coverage:ignore-start
 
 /// Low level PieChart Widget.
 class PieChartLeaf extends MultiChildRenderObjectWidget {
   PieChartLeaf({
-    Key? key,
+    super.key,
     required this.data,
     required this.targetData,
-  }) : super(key: key, children: targetData.sections.toWidgets());
+  }) : super(children: targetData.sections.toWidgets());
 
-  final PieChartData data, targetData;
+  final PieChartData data;
+  final PieChartData targetData;
 
   @override
   RenderPieChart createRenderObject(BuildContext context) => RenderPieChart(
         context,
         data,
         targetData,
-        MediaQuery.of(context).textScaleFactor,
+        MediaQuery.of(context).textScaler,
       );
 
   @override
@@ -34,7 +34,7 @@ class PieChartLeaf extends MultiChildRenderObjectWidget {
     renderObject
       ..data = data
       ..targetData = targetData
-      ..textScale = MediaQuery.of(context).textScaleFactor
+      ..textScaler = MediaQuery.of(context).textScaler
       ..buildContext = context;
   }
 }
@@ -46,11 +46,14 @@ class RenderPieChart extends RenderBaseChart<PieTouchResponse>
         ContainerRenderObjectMixin<RenderBox, MultiChildLayoutParentData>,
         RenderBoxContainerDefaultsMixin<RenderBox, MultiChildLayoutParentData>
     implements MouseTrackerAnnotation {
-  RenderPieChart(BuildContext context, PieChartData data,
-      PieChartData targetData, double textScale)
-      : _data = data,
+  RenderPieChart(
+    BuildContext context,
+    PieChartData data,
+    PieChartData targetData,
+    TextScaler textScaler,
+  )   : _data = data,
         _targetData = targetData,
-        _textScale = textScale,
+        _textScaler = textScaler,
         super(targetData.pieTouchData, context);
 
   PieChartData get data => _data;
@@ -74,12 +77,12 @@ class RenderPieChart extends RenderBaseChart<PieTouchResponse>
     markNeedsLayout();
   }
 
-  double get textScale => _textScale;
-  double _textScale;
+  TextScaler get textScaler => _textScaler;
+  TextScaler _textScaler;
 
-  set textScale(double value) {
-    if (_textScale == value) return;
-    _textScale = value;
+  set textScaler(TextScaler value) {
+    if (_textScaler == value) return;
+    _textScaler = value;
     markNeedsPaint();
   }
 
@@ -88,11 +91,10 @@ class RenderPieChart extends RenderBaseChart<PieTouchResponse>
   Size? mockTestSize;
 
   @visibleForTesting
-  var painter = PieChartPainter();
+  PieChartPainter painter = PieChartPainter();
 
-  PaintHolder<PieChartData> get paintHolder {
-    return PaintHolder(data, targetData, textScale);
-  }
+  PaintHolder<PieChartData> get paintHolder =>
+      PaintHolder(data, targetData, textScaler);
 
   @override
   void setupParentData(RenderBox child) {
@@ -109,7 +111,7 @@ class RenderPieChart extends RenderBaseChart<PieTouchResponse>
     final childConstraints = constraints.loosen();
 
     var counter = 0;
-    var badgeOffsets = painter.getBadgeOffsets(
+    final badgeOffsets = painter.getBadgeOffsets(
       mockTestSize ?? size,
       paintHolder,
     );
@@ -133,9 +135,9 @@ class RenderPieChart extends RenderBaseChart<PieTouchResponse>
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    final canvas = context.canvas;
-    canvas.save();
-    canvas.translate(offset.dx, offset.dy);
+    final canvas = context.canvas
+      ..save()
+      ..translate(offset.dx, offset.dy);
     painter.paint(
       buildContext,
       CanvasWrapper(canvas, mockTestSize ?? size),
@@ -158,7 +160,7 @@ class RenderPieChart extends RenderBaseChart<PieTouchResponse>
   @override
   void visitChildrenForSemantics(RenderObjectVisitor visitor) {
     /// It produces an error when we change the sections list, Check this issue:
-    /// https://github.com/imaNNeoFighT/fl_chart/issues/861
+    /// https://github.com/imaNNeo/fl_chart/issues/861
     ///
     /// Below is the error message:
     /// Updated layout information required for RenderSemanticsAnnotations#f3b96 NEEDS-LAYOUT NEEDS-PAINT to calculate semantics.
